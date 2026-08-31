@@ -1,3 +1,13 @@
+/**
+ * System & Integration Concept: 3rd-Party API Integration
+ * 
+ * Demonstrates 3rd-Party Service Integration with Stripe Payment Gateway:
+ * 1. Client SDK Initialization: Instantiates `Stripe` client with API secret key.
+ * 2. Remote Session Generation: `stripe.checkout.sessions.create()` for handling subscriptions.
+ * 3. Webhook Signature Verification: `stripe.webhooks.constructEvent()` for secure event processing.
+ * 4. Fallback Mode: Provides graceful local simulation toggle when 3rd-party credentials are not configured.
+ */
+
 import Stripe from 'stripe';
 import { prisma } from '../config/db';
 import { logger } from '../utils/logger';

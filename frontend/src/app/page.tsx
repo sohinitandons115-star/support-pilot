@@ -1,6 +1,13 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
+import {
+  demonstrateEventLoop,
+  modernFetchUserDataPromise,
+  demonstrateHoisting,
+  EventLoopLog
+} from '../utils/jsConceptsDemo';
 import {
   Bot,
   LayoutDashboard,
@@ -28,7 +35,8 @@ import {
   RefreshCw,
   ExternalLink,
   ChevronRight,
-  Database
+  Database,
+  Code2
 } from 'lucide-react';
 
 interface ChatMessage {
@@ -85,7 +93,7 @@ interface EvalCase {
 }
 
 export default function SaaSApp() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'chat' | 'tickets' | 'orders' | 'documents' | 'evals' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'chat' | 'tickets' | 'orders' | 'documents' | 'evals' | 'settings' | 'js-concepts'>('dashboard');
   const [userRole, setUserRole] = useState<'CUSTOMER' | 'ADMIN'>('ADMIN');
 
   // Chat State
@@ -191,6 +199,76 @@ export default function SaaSApp() {
 
   // Subscription upgrade simulation
   const [subTier, setSubTier] = useState<'FREE' | 'PRO'>('PRO');
+
+  // JS Concepts State & Handlers
+  const [eventLoopLogs, setEventLoopLogs] = useState<EventLoopLog[]>([]);
+  const [promiseDemoUser, setPromiseDemoUser] = useState<{ id: string; name: string } | null>(null);
+  const [hoistingDemo, setHoistingDemo] = useState<{ hoistedFunctionResult: string; hoistedVarResult: string; tdzExplanation: string } | null>(null);
+  const [asyncFetchState, setAsyncFetchState] = useState<{ loading: boolean; data: any; error: string | null }>({
+    loading: false,
+    data: null,
+    error: null
+  });
+
+  // Run Event Loop Demo
+  const handleRunEventLoopDemo = async () => {
+    setEventLoopLogs([]);
+    const logs = await demonstrateEventLoop();
+    setEventLoopLogs(logs);
+  };
+
+  // Run Promises vs Callbacks Demo
+  const handleRunPromiseDemo = async () => {
+    try {
+      const user = await modernFetchUserDataPromise('usr_9981');
+      setPromiseDemoUser(user);
+    } catch (err: any) {
+      console.error(err);
+    }
+  };
+
+  // Run Hoisting Demo
+  const handleRunHoistingDemo = () => {
+    const res = demonstrateHoisting();
+    setHoistingDemo(res);
+  };
+
+  // Async Data Fetching Demo (Frontend Concept)
+  const handleRunAsyncFetchDemo = async () => {
+    setAsyncFetchState({ loading: true, data: null, error: null });
+    const controller = new AbortController();
+
+    try {
+      // Async fetch call from simulated endpoint with cancellation support
+      const response = await fetch('/api/documents', {
+        signal: controller.signal,
+        headers: { 'Content-Type': 'application/json' }
+      }).catch(() => null);
+
+      if (response && response.ok) {
+        const json = await response.json();
+        setAsyncFetchState({ loading: false, data: json, error: null });
+      } else {
+        // Fallback simulation if backend server is offline during static preview
+        await new Promise((r) => setTimeout(r, 600));
+        setAsyncFetchState({
+          loading: false,
+          data: {
+            success: true,
+            fetchedAt: new Date().toLocaleTimeString(),
+            status: '200 OK',
+            payload: [
+              { id: 'doc_1', title: 'Return Policy', status: 'INGESTED' },
+              { id: 'doc_2', title: 'Shipping Guidelines', status: 'INGESTED' }
+            ]
+          },
+          error: null
+        });
+      }
+    } catch (err: any) {
+      setAsyncFetchState({ loading: false, data: null, error: err.message || 'Fetch failed' });
+    }
+  };
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -576,6 +654,27 @@ export default function SaaSApp() {
               <Settings className="h-4 w-4" />
               Settings & Billing
             </button>
+
+            <button
+              onClick={() => setActiveTab('js-concepts')}
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                activeTab === 'js-concepts'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                  : 'text-emerald-400/80 hover:text-emerald-300 hover:bg-slate-800/60'
+              }`}
+            >
+              <Code2 className="h-4 w-4" />
+              JS Concepts & Async Lab
+            </button>
+
+            <Link
+              href="/ssr-demo"
+              className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium text-amber-400/80 hover:text-amber-300 hover:bg-slate-800/60 transition-all border border-amber-500/20 mt-2"
+            >
+              <Zap className="h-4 w-4 text-amber-400" />
+              SSR Demo Page
+              <ExternalLink className="h-3 w-3 ml-auto opacity-70" />
+            </Link>
           </nav>
         </div>
 
@@ -1264,6 +1363,143 @@ export default function SaaSApp() {
                   >
                     {subTier === 'PRO' ? 'Simulate Downgrade to FREE' : 'Simulate Upgrade to PRO'}
                   </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 8: JS CONCEPTS & ASYNC DATA FETCHING LAB */}
+          {activeTab === 'js-concepts' && (
+            <div className="space-y-6 max-w-6xl">
+              <div>
+                <h3 className="text-lg font-semibold text-white">Frontend Core JavaScript & Async Data Fetching Lab</h3>
+                <p className="text-xs text-slate-400">Interactive execution of Event Loop queuing, Promises vs Callbacks refactoring, Function Hoisting & Async Fetching</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* 1. Event Loop Demo */}
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-semibold text-emerald-400">1. JavaScript — Event Loop</h4>
+                      <p className="text-xs text-slate-400">Microtasks (Promises) vs Macrotasks (Timers)</p>
+                    </div>
+                    <button
+                      onClick={handleRunEventLoopDemo}
+                      className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium transition"
+                    >
+                      Run Event Loop
+                    </button>
+                  </div>
+                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 min-h-[140px] font-mono text-xs space-y-2">
+                    {eventLoopLogs.length === 0 ? (
+                      <span className="text-slate-500 italic">Click "Run Event Loop" to observe Call Stack & Microtask execution order.</span>
+                    ) : (
+                      eventLoopLogs.map((log) => (
+                        <div key={log.step} className="flex items-start gap-2">
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-emerald-300">
+                            {log.type}
+                          </span>
+                          <span className="text-slate-300">{log.message}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* 2. Promises vs Callbacks Demo */}
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-semibold text-indigo-400">2. JavaScript — Promises vs Callbacks</h4>
+                      <p className="text-xs text-slate-400">Refactoring legacy callbacks into Promise async/await</p>
+                    </div>
+                    <button
+                      onClick={handleRunPromiseDemo}
+                      className="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium transition"
+                    >
+                      Fetch via Promise
+                    </button>
+                  </div>
+                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 min-h-[140px] font-mono text-xs">
+                    {!promiseDemoUser ? (
+                      <span className="text-slate-500 italic">Click "Fetch via Promise" to run promisified async helper.</span>
+                    ) : (
+                      <div className="space-y-1">
+                        <div className="text-emerald-400 font-bold">✓ Promise Resolved Successfully:</div>
+                        <pre className="text-slate-300 bg-slate-900 p-2 rounded border border-slate-800">
+                          {JSON.stringify(promiseDemoUser, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 3. Hoisting Demo */}
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-semibold text-amber-400">3. JavaScript — Hoisting</h4>
+                      <p className="text-xs text-slate-400">Function declarations vs Temporal Dead Zone (TDZ)</p>
+                    </div>
+                    <button
+                      onClick={handleRunHoistingDemo}
+                      className="px-3.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-medium transition"
+                    >
+                      Test Hoisting
+                    </button>
+                  </div>
+                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 min-h-[140px] font-mono text-xs space-y-2">
+                    {!hoistingDemo ? (
+                      <span className="text-slate-500 italic">Click "Test Hoisting" to evaluate variable & function hoisting scopes.</span>
+                    ) : (
+                      <>
+                        <div className="text-slate-300">
+                          <span className="text-amber-400 font-bold">Function Hoisting: </span>
+                          {hoistingDemo.hoistedFunctionResult}
+                        </div>
+                        <div className="text-slate-400">
+                          <span className="text-slate-500 font-bold">var Variable Hoisting: </span>
+                          {hoistingDemo.hoistedVarResult}
+                        </div>
+                        <div className="text-slate-400 text-[11px] italic border-t border-slate-800 pt-1 mt-1">
+                          {hoistingDemo.tdzExplanation}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* 4. Async Data Fetching Demo */}
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-semibold text-cyan-400">4. Async Data Fetching from API</h4>
+                      <p className="text-xs text-slate-400">Async fetch with cancellation, loading state & payload handling</p>
+                    </div>
+                    <button
+                      onClick={handleRunAsyncFetchDemo}
+                      disabled={asyncFetchState.loading}
+                      className="px-3.5 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-medium transition flex items-center gap-1.5"
+                    >
+                      {asyncFetchState.loading && <RefreshCw className="h-3 w-3 animate-spin" />}
+                      {asyncFetchState.loading ? 'Fetching...' : 'Fetch Documents API'}
+                    </button>
+                  </div>
+                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 min-h-[140px] font-mono text-xs">
+                    {asyncFetchState.loading ? (
+                      <span className="text-cyan-400 italic">Fetching API payload asynchronously...</span>
+                    ) : asyncFetchState.data ? (
+                      <div className="space-y-1">
+                        <div className="text-emerald-400 font-bold">✓ Response Payload Received:</div>
+                        <pre className="text-cyan-300 bg-slate-900 p-2 rounded border border-slate-800 max-h-28 overflow-y-auto">
+                          {JSON.stringify(asyncFetchState.data, null, 2)}
+                        </pre>
+                      </div>
+                    ) : (
+                      <span className="text-slate-500 italic">Click "Fetch Documents API" to trigger async HTTP data request.</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

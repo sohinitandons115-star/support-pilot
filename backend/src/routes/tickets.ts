@@ -39,6 +39,8 @@ router.get(
 );
 
 // Get specific ticket and its messages thread
+// SQL (Postgres) Concept: Multi-table SQL JOINs executed via Prisma 'include'
+// Translates to: SELECT * FROM "Ticket" INNER JOIN "User" ON ... LEFT JOIN "TicketMessage" ON ...
 router.get(
   '/:id',
   authenticateJWT,
@@ -48,9 +50,11 @@ router.get(
     const ticketId = req.params.id;
 
     try {
+      // SQL JOIN: Joins Ticket table with User (customer) and TicketMessage tables
       const ticket = await prisma.ticket.findUnique({
         where: { id: ticketId },
         include: {
+          customer: { select: { name: true, email: true } },
           messages: {
             orderBy: { createdAt: 'asc' },
             include: { sender: { select: { name: true, role: true } } }
@@ -148,30 +152,27 @@ router.post(
         });
       }
 
-      // Add the message
-      const ticketMessage = await prisma.ticketMessage.create({
-        data: {
-          ticketId,
-          senderId: req.user.id,
-          message
-        },
-        include: { sender: { select: { name: true, role: true } } }
-      });
+      // SQL (Postgres) Concept: ACID Database Transactions
+      // Executes ticket message insertion AND ticket status update in a single atomic transaction.
+      // If either operation fails, the transaction rolls back completely to maintain database consistency.
+      let newStatus: 'IN_PROGRESS' | 'OPEN' = req.user.role === 'ADMIN' ? 'IN_PROGRESS' : 'OPEN';
 
-      // Update ticket status to open/in progress if user responds, or resolve/update accordingly
-      let newStatus = ticket.status;
-      if (req.user.role === 'ADMIN') {
-        newStatus = 'IN_PROGRESS';
-      } else {
-        newStatus = 'OPEN';
-      }
+      const [ticketMessage] = await prisma.$transaction([
+        prisma.ticketMessage.create({
+          data: {
+            ticketId,
+            senderId: req.user.id,
+            message
+          },
+          include: { sender: { select: { name: true, role: true } } }
+        }),
+        prisma.ticket.update({
+          where: { id: ticketId },
+          data: { status: newStatus }
+        })
+      ]);
 
-      await prisma.ticket.update({
-        where: { id: ticketId },
-        data: { status: newStatus }
-      });
-
-      logger.info(`Message added to ticket ${ticket.ticketNumber} by ${req.user.id}`);
+      logger.info(`Message added atomically to ticket ${ticket.ticketNumber} by ${req.user.id}`);
 
       res.status(201).json({
         success: true,

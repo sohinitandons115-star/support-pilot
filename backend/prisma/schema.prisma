@@ -1,3 +1,10 @@
+// PostgreSQL Schema for SupportPilot
+// SQL (Postgres) Concepts Demonstrated:
+// 1. Relational Schema Design with Primary Keys (@id) and Foreign Keys (@relation)
+// 2. Database Normalization (3NF - Third Normal Form separating Users, Orders, Tickets, Subscriptions, Messages)
+// 3. Database Indexing for Query Performance (@@index on customerId, email, orderNumber, status)
+// 4. Declarative Relational Models enabling SQL JOINs via Prisma Client
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")

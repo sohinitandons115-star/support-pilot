@@ -1,6 +1,18 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-// 1. Conversation Schema
+/**
+ * NoSQL (MongoDB) Modeling Concept: Embedding vs Referencing Relationships
+ * 
+ * 1. EMBEDDING (Denormalization):
+ *    - Embedded Subdocuments: `messages` sub-array embedded inside `ConversationSchema`, `details` embedded in `EvaluationResultSchema`.
+ *    - Use Case: Highly cohesive sub-data that is always read and updated alongside the parent entity (eliminates join overhead for fast single-read performance).
+ * 
+ * 2. REFERENCING (Normalization):
+ *    - Referenced Identifiers: `userId` referencing PostgreSQL User ID, `conversationId` linking AgentRuns to Conversations.
+ *    - Use Case: Cross-collection relations where child entities grow unbounded or require independent querying and aggregation.
+ */
+
+// 1. Conversation Schema (Demonstrates EMBEDDED Messages)
 export interface IMessage {
   role: 'user' | 'model' | 'system' | 'tool';
   content: string;
@@ -9,8 +21,8 @@ export interface IMessage {
 }
 
 export interface IConversation extends Document {
-  userId: string;
-  messages: IMessage[];
+  userId: string; // REFERENCED: Foreign Key pointing to PostgreSQL User table
+  messages: IMessage[]; // EMBEDDED: Subdocuments stored directly inside conversation document
   createdAt: Date;
   updatedAt: Date;
 }
@@ -24,7 +36,7 @@ const MessageSchema = new Schema<IMessage>({
 
 const ConversationSchema = new Schema<IConversation>({
   userId: { type: String, required: true, index: true },
-  messages: [MessageSchema]
+  messages: [MessageSchema] // Embedded subdocument schema array
 }, { timestamps: true });
 
 ConversationSchema.index({ createdAt: -1 });

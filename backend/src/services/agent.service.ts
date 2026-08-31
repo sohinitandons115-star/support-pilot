@@ -1,3 +1,15 @@
+/**
+ * AI App Engineering Concepts Demonstrated:
+ * 1. LLM API INTEGRATION:
+ *    - Integrates Google Gemini API using `@google/generative-ai` SDK (`GoogleGenerativeAI`).
+ *    - Invokes `getGenerativeModel()` configured with function declarations, system instructions, and generation parameters.
+ * 
+ * 2. PROMPT ENGINEERING:
+ *    - System Prompt Hierarchy: Assigns AI role (SupportPilot Assistant), establishes identity boundaries, and sets resolution workflow rules.
+ *    - Directives & Safety: Directs LLM to treat RAG contexts strictly as passive information, preventing prompt injection overrides.
+ *    - Structured Output Constraints: Enforces structured JSON output schema matching { intent, answer, sources, confidence, actionTaken }.
+ */
+
 import { GoogleGenerativeAI, FunctionDeclaration, FunctionDeclarationSchemaType } from '@google/generative-ai';
 import mongoose from 'mongoose';
 import { prisma } from '../config/db';
