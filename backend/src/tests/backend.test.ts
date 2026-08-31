@@ -205,4 +205,43 @@ describe('3. INTEGRATION TESTS - Protected Resource Access (RBAC)', () => {
     expect(res.body.success).toBe(true);
     expect(res.body.data.name).toBe('Alex Doe');
   });
+
+  test('POST /api/v1/auth/google handles Google OAuth 3rd-party login', async () => {
+    const oauthBody = {
+      email: 'oauth.user@gmail.com',
+      name: 'Google User',
+      googleId: 'google-oauth-id-9981'
+    };
+
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
+    (prisma.user.create as jest.Mock).mockResolvedValue({
+      id: 'uuid-google-9981',
+      email: 'oauth.user@gmail.com',
+      name: 'Google User',
+      googleId: 'google-oauth-id-9981',
+      role: 'CUSTOMER'
+    });
+
+    const res = await request(app)
+      .post('/api/v1/auth/google')
+      .send(oauthBody);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.provider).toBe('GOOGLE_OAUTH_2.0');
+    expect(res.body.data.token).toBeDefined();
+  });
+
+  test('GET /api/v1/admin/ai-usage returns 403 Forbidden for non-ADMIN CUSTOMER role (RBAC Check)', async () => {
+    const customerPayload = { id: 'uuid-alex-123', email: 'alex@customer.com', role: 'CUSTOMER' };
+    const token = jwt.sign(customerPayload, JWT_SECRET, { expiresIn: '1h' });
+
+    const res = await request(app)
+      .get('/api/v1/admin/ai-usage')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(403);
+    expect(res.body.success).toBe(false);
+    expect(res.body.error.code).toBe('FORBIDDEN');
+  });
 });
