@@ -1,0 +1,153 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+  SUPPORT_AGENT
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  DELAYED
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  REQUIRING_ATTENTION
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  INACTIVE
+}
+
+enum SubscriptionTier {
+  FREE
+  PRO
+}
+
+enum PaymentStatus {
+  SUCCESSFUL
+  FAILED
+}
+
+model User {
+  id            String          @id @default(uuid())
+  email         String          @unique
+  password      String?         // Nullable for OAuth users
+  name          String
+  role          Role            @default(CUSTOMER)
+  googleId      String?         @unique
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  companyId     String?
+  company       Company?        @relation(fields: [companyId], references: [id])
+  orders        Order[]
+  tickets       Ticket[]
+  messages      TicketMessage[]
+  subscription  Subscription?
+  payments      Payment[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model Company {
+  id        String   @id @default(uuid())
+  name      String
+  users     User[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Order {
+  id          String      @id @default(uuid())
+  orderNumber String      @unique
+  customerId  String
+  customer    User        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  items       Json        // Array of { productName, quantity, price }
+  totalAmount Float
+  status      OrderStatus @default(PENDING)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([customerId])
+  @@index([orderNumber])
+}
+
+model Ticket {
+  id           String         @id @default(uuid())
+  ticketNumber String         @unique
+  title        String
+  description  String
+  category     String         // e.g. "TECHNICAL", "BILLING", "GENERAL", "REFUND"
+  status       TicketStatus   @default(OPEN)
+  priority     TicketPriority @default(MEDIUM)
+  customerId   String
+  customer     User           @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  messages     TicketMessage[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([customerId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model TicketMessage {
+  id        String   @id @default(uuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  senderId  String
+  sender    User     @relation(fields: [senderId], references: [id])
+  message   String
+  createdAt DateTime @default(now())
+
+  @@index([ticketId])
+}
+
+model Subscription {
+  id                   String             @id @default(uuid())
+  customerId           String             @unique
+  customer             User               @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  stripeSubscriptionId String?            @unique
+  status               SubscriptionStatus @default(INACTIVE)
+  tier                 SubscriptionTier   @default(FREE)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+}
+
+model Payment {
+  id                    String        @id @default(uuid())
+  customerId            String
+  customer              User          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  amount                Float
+  currency              String        @default("usd")
+  stripePaymentIntentId String?       @unique
+  status                PaymentStatus @default(SUCCESSFUL)
+  createdAt             DateTime      @default(now())
+
+  @@index([customerId])
+}
