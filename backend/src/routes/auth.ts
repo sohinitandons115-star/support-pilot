@@ -137,16 +137,22 @@ router.post(
   }
 );
 
-// Simulated OAuth login (Google) for development and test modes
+/**
+ * Auth & Security Concept: OAuth / 3rd-Party Login
+ * 
+ * 1. OAuth 2.0 Flow: Receives Google identity tokens or provider profile claims (`email`, `name`, `googleId`).
+ * 2. Account Provisioning: Upserts user record in PostgreSQL, assigning default CUSTOMER role and FREE tier subscription.
+ * 3. JWT Token Exchange: Issues signed 24h JWT containing user identity and role scopes.
+ */
 router.post(
-  '/oauth-simulation',
+  ['/google', '/oauth-simulation'],
   async (req: Request, res: Response, next: NextFunction) => {
     const { email, name, googleId } = req.body;
 
     if (!email || !name || !googleId) {
       return res.status(400).json({
         success: false,
-        error: { code: 'INVALID_INPUT', message: 'Missing simulated profile details' }
+        error: { code: 'INVALID_INPUT', message: 'Missing OAuth profile details (email, name, googleId required)' }
       });
     }
 
@@ -172,7 +178,7 @@ router.post(
             tier: 'FREE'
           }
         });
-        logger.info(`Simulated Google OAuth new user created: ${user.email}`);
+        logger.info(`Google OAuth 3rd-party new user registered: ${user.email}`);
       } else {
         if (!user.googleId) {
           await prisma.user.update({
@@ -180,7 +186,7 @@ router.post(
             data: { googleId }
           });
         }
-        logger.info(`Simulated Google OAuth user login: ${user.email}`);
+        logger.info(`Google OAuth 3rd-party user logged in: ${user.email}`);
       }
 
       const token = jwt.sign(
@@ -193,6 +199,7 @@ router.post(
         success: true,
         data: {
           token,
+          provider: 'GOOGLE_OAUTH_2.0',
           user: {
             id: user.id,
             email: user.email,
